@@ -68,7 +68,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 			AfxMessageBox( "Image has to be a '.rgb' file\nUsage - Image.exe image_a.rgb image_b.rgb");
 			//return FALSE;
 		}
-		queryImage.RGBtoHSV();
+		//queryImage.RGBtoHSV();
 	}
 
 	// Initialize global strings

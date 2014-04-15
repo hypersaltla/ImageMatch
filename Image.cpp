@@ -311,9 +311,6 @@ bool MyImage::RGBtoHSV()
 	delete Rbuf;
 	delete Gbuf;
 	delete Bbuf;
-	delete Hbuf;
-	delete Sbuf;
-	delete Vbuf;
 
 	return true;
 }
