@@ -17,6 +17,9 @@ MyImage::MyImage()
 	Width = -1;
 	Height = -1;
 	ImagePath[0] = 0;
+    Hbuf = NULL;
+    Sbuf = NULL;
+    Vbuf = NULL;
 }
 
 MyImage::~MyImage()
@@ -252,9 +255,9 @@ bool MyImage::RGBtoHSV()
 
 	for (int i = 0; i < Height*Width; i++)
 	{
-		Bbuf[i] = Data[3*i];
-		Gbuf[i] = Data[3*i+1];	
-		Rbuf[i] = Data[3*i+2];
+		Rbuf[i] = (unsigned char) Data[3*i];
+		Gbuf[i] = (unsigned char) Data[3*i+1];
+		Bbuf[i] = (unsigned char) Data[3*i+2];
 	}
 
 	for (int i = 0; i < Height*Width; i++)
@@ -299,15 +302,17 @@ bool MyImage::RGBtoHSV()
 		//TRACE( "R: %f\n", R);
 		//TRACE( "G: %f\n", G);
 		//TRACE( "B: %f\n", B);
-		TRACE( "Red: %f\n", Rbuf[i]);
-		TRACE( "Green: %f\n", Gbuf[i]);
-		TRACE( "Blue: %f\n", Bbuf[i]);
-		TRACE( "Hue: %d\n", Hbuf[i]);
-		TRACE( "Sat: %d\n", Sbuf[i]);
-		TRACE( "Val: %d\n", Vbuf[i]);
-
+        if (Hbuf[i] < 0) {
+            
+		printf( "Red: %f\n", Rbuf[i]);
+		printf( "Green: %f\n", Gbuf[i]);
+		printf( "Blue: %f\n", Bbuf[i]);
+		printf( "Hue: %d\n", Hbuf[i]);
+		printf( "Sat: %d\n", Sbuf[i]);
+		printf( "Val: %d\n", Vbuf[i]);
+        }
 	}
-
+    
 	delete Rbuf;
 	delete Gbuf;
 	delete Bbuf;

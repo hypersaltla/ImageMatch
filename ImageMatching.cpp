@@ -9,15 +9,31 @@
 #define V_N 100
 #define THRESHOLD 10
 
+void print_arr(int *array, int size)
+{
+    for (int i = 0; i < size; i++) {
+        printf("%d ", array[i]);
+    }
+    printf("\n");
+}
 //get the histogram of Hue from the MyImage class, return an array
 int *getHistogram_H(const MyImage &img)
 {
     int *histogram = new int[H_N];
-    memset(histogram, 0, sizeof(int) * H_N);
-    int total = img.Width * img.Height;
-    for(int i = 0; i < total; i++) {
-        histogram[img.Hbuf[i]]++;
+    //memset(histogram, 0, H_N);
+    for (int i = 0; i < H_N; i++) {
+        histogram[i] = 0;
     }
+
+    int total = img.getWidth() * img.getHeight();
+    int *Hbuf = img.getHbuf();
+    //print_arr(histogram, 360);
+    //printf("%d\n", total);
+    for(int i = 0; i < total; i++) {
+        //printf("%d\n", Hbuf[i]);
+        histogram[Hbuf[i]]++;
+    }
+    
     return histogram;
 }
 
@@ -84,19 +100,28 @@ double differ(double *his_logo, double *his_pic, int size)
     return rss;
 }
 
+
+
 //the basic version of main algorithm
 bool compareImage_basic(const MyImage &img_logo, const MyImage &img_pic)
 {
 	int *his_logo = getHistogram_H(img_logo);
 	int *his_pic = getHistogram_H(img_pic);
-	retainMajority(his_logo, 0.9, H_N);
+    print_arr(his_pic, H_N);
+    int total_pixel = img_logo.getWidth() * img_logo.getHeight();
+	retainMajority(his_logo, 0.9, H_N, total_pixel);
 	filter(his_logo, his_pic, H_N);
-	double *norm_his_logo = normalize(his_logo, H_N);
-	double *norm_his_pic = normalize(his_pic, H_N);
-	double diff = differ(norm_his_logo, norm_his_pic);
-	delete his_logo;
-	delete his_pic;
-	delete norm_his_logo;
-	delete norm_his_pic;
+	double *norm_his_logo = normalize(his_logo, H_N, total_pixel);
+	double *norm_his_pic = normalize(his_pic, H_N, total_pixel);
+	double diff = differ(norm_his_logo, norm_his_pic, H_N);
+    
+    if(his_logo)
+        delete his_logo;
+    if (his_pic)
+        delete his_pic;
+    if (norm_his_logo)
+        delete norm_his_logo;
+    if (norm_his_pic)
+        delete norm_his_pic;
 	return diff <= THRESHOLD;
 }
