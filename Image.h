@@ -35,7 +35,8 @@ private:
 	int		Width;					// Width of Image
 	int		Height;					// Height of Image
 	char	ImagePath[_MAX_PATH];	// Image location
-	char*	Data;					// RGB data of the image
+	unsigned char   *Data;					// RGB data of the image
+	unsigned char   *Alpha;                   // alpha frame
 	int     *Hbuf;                  // Hue buffer
 	int     *Sbuf;                  // Saturation buffer
 	int     *Vbuf;                  // Value buffer
@@ -54,21 +55,23 @@ public:
 	// Reader & Writer functions
 	void	setWidth( const int w)  { Width = w; }; 
 	void	setHeight(const int h) { Height = h; }; 
-	void	setImageData( const char *img ) { Data = (char *)img; };
+	void	setImageData( const unsigned char *img ) { Data = (unsigned char *)img; };
 	void	setImagePath( const char *path) { strcpy(ImagePath, path); }
 	bool    RGBtoHSV(); //RGB convert to HSV
-	int		getWidth() { return Width; };
-	int		getHeight() { return Height; };
-	char*	getImageData() { return Data; };
-	char*	getImagePath() { return ImagePath; }
-	int*	getHbuf() { return Hbuf; }
-	int*	getSbuf() { return Sbuf; }
-	int*	getVbuf() { return Vbuf; }
+	int		getWidth() const { return Width; };
+	int		getHeight() const { return Height; };
+	unsigned char*	getImageData() const { return Data; };
+	unsigned char*  getAlpha() const { return Alpha; };
+	//char*	getImagePath() const { return ImagePath; }
+	int*	getHbuf() const { return Hbuf; }
+	int*	getSbuf() const { return Sbuf; }
+	int*	getVbuf() const { return Vbuf; }
 
 
 	// Input Output operations
 	bool	ReadImage();
 	bool	WriteImage();
+	bool    ReadAlphas(const char *alpha_file);
 
 	// Modifications
 	bool	Modify();
@@ -76,5 +79,14 @@ public:
 	
 
 };
+
+void print_arr(int *array, int size);
+int *getHistogram_H(const MyImage &img);
+void retainMajority(int *histogram, double percent, const int size, int total);
+double *normalize(int *histogram, int size, int total);
+void filter(int *his_logo, int *his_pic, int size);
+double differ(double *his_logo, double *his_pic, int size);
+bool compareImage_basic(const MyImage &img_logo, const MyImage &img_pic);
+
 
 #endif //IMAGE_DISPLAY

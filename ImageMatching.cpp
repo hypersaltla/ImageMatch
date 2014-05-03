@@ -7,14 +7,15 @@
 #define H_N 360
 #define S_N 100
 #define V_N 100
-#define THRESHOLD 10
+#define THRESHOLD 0.05
 
-void print_arr(int *array, int size)
+void print_arr(int *arr, int size)
 {
     for (int i = 0; i < size; i++) {
-        printf("%d ", array[i]);
+       // printf("%d ", array[i]);
+		TRACE("%d ", arr[i]);
     }
-    printf("\n");
+    TRACE("\n");
 }
 //get the histogram of Hue from the MyImage class, return an array
 int *getHistogram_H(const MyImage &img)
@@ -25,12 +26,18 @@ int *getHistogram_H(const MyImage &img)
         histogram[i] = 0;
     }
 
-    int total = img.getWidth() * img.getHeight();
+	int total = img.getWidth() * img.getHeight();
     int *Hbuf = img.getHbuf();
     //print_arr(histogram, 360);
     //printf("%d\n", total);
+	unsigned char *alpha_frame = img.getAlpha();
     for(int i = 0; i < total; i++) {
         //printf("%d\n", Hbuf[i]);
+		if(alpha_frame && !alpha_frame[i]) {
+			//TRACE("%d\n", Hbuf[i]);
+			continue;
+		}
+		//if(Hbuf[i] != 0) TRACE("%d\n", Hbuf[i]);
         histogram[Hbuf[i]]++;
     }
     
@@ -38,41 +45,49 @@ int *getHistogram_H(const MyImage &img)
 }
 
 //retain the majority color in the histogram with "percent" of total pixels
-void retainMajority(int *histogram, double percent, int size, int total)
+void retainMajority(int *histogram, double percent, const int size)
 {
-    int tmp[size][2];
+	int total = 0;
+    int tmp[H_N][2];
     for(int i = 0; i < size; i++) {
         tmp[i][0] = histogram[i];
         tmp[i][1] = i;
+		total += tmp[i][0];
     }
     //sort
     for(int i = 1; i < size; i++) {
         int cnt = tmp[i][0];
         int index = tmp[i][1];
         int j = i - 1;
-        for(; j >= 0 && tmp[j][0] < cnt; j--) {
+        for(; j >= 0 && tmp[j][0] > cnt; j--) {
             tmp[j + 1][0] = tmp[j][0];
             tmp[j + 1][1] = tmp[j][1];
         }
         tmp[j + 1][0] = cnt;
         tmp[j + 1][1] = index;
     }
-    
+    //if(arr_sum == total) TRACE("%d\n", arr_sum);
     int bound = total * percent;
     int sum = 0, pix_i = size - 1;
     for(; pix_i >= 0; pix_i--) {
         sum += tmp[pix_i][0];
         if(sum >= bound) break;
     }
+	//TRACE("%d\n", pix_i);
+	//TRACE("%d\n", tmp[pix_i][0]);
     for(int i = 0; i < pix_i; i++) {
         histogram[tmp[i][1]] = 0;
     }
 }
 
 //normalize the histogram, get the new histogram ranging from 0 - 1
-double *normalize(int *histogram, int size, int total)
+double *normalize(int *histogram, int size)
 {
     double *norm_his = new double[size];
+	int total = 0;
+	for(int i = 0; i < size; i++) {
+		total += histogram[i];
+	}
     for(int i = 0; i < size; i++) {
         norm_his[i] = histogram[i] / (double)total;
     }
@@ -107,14 +122,19 @@ bool compareImage_basic(const MyImage &img_logo, const MyImage &img_pic)
 {
 	int *his_logo = getHistogram_H(img_logo);
 	int *his_pic = getHistogram_H(img_pic);
+	print_arr(his_logo, H_N);
     print_arr(his_pic, H_N);
     int total_pixel = img_logo.getWidth() * img_logo.getHeight();
-	retainMajority(his_logo, 0.9, H_N, total_pixel);
+	retainMajority(his_logo, 0.9, H_N);
+	TRACE("After retaining majority\n");
+	print_arr(his_logo, H_N);
 	filter(his_logo, his_pic, H_N);
-	double *norm_his_logo = normalize(his_logo, H_N, total_pixel);
-	double *norm_his_pic = normalize(his_pic, H_N, total_pixel);
+	TRACE("After filtering\n");
+	print_arr(his_pic, H_N);
+	double *norm_his_logo = normalize(his_logo, H_N);
+	double *norm_his_pic = normalize(his_pic, H_N);
 	double diff = differ(norm_his_logo, norm_his_pic, H_N);
-    
+    TRACE("ecu diff: %lf\n", diff);
     if(his_logo)
         delete his_logo;
     if (his_pic)
@@ -123,5 +143,6 @@ bool compareImage_basic(const MyImage &img_logo, const MyImage &img_pic)
         delete norm_his_logo;
     if (norm_his_pic)
         delete norm_his_pic;
+
 	return diff <= THRESHOLD;
 }

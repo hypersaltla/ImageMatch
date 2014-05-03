@@ -13,6 +13,7 @@
 
 // Include class files
 #include "Image.h"
+//#include "ImageMatching.cpp"
 
 #define MAX_LOADSTRING 100
 
@@ -42,8 +43,8 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 
 	// Read in the image and its copy
 	int w = 352, h = 288;
-	char ImagePath_q[_MAX_PATH], ImagePath_d[_MAX_PATH];
-	sscanf(lpCmdLine, "%s %s", &ImagePath_q, &ImagePath_d);
+	char ImagePath_q[_MAX_PATH], ImagePath_d[_MAX_PATH], ImagePath_a[_MAX_PATH];
+	sscanf(lpCmdLine, "%s %s %s", &ImagePath_q, &ImagePath_d, &ImagePath_a);
 	queryImage.setWidth(w);
 	queryImage.setHeight(h);
 	destImage.setWidth(w);
@@ -68,7 +69,19 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 			AfxMessageBox( "Image has to be a '.rgb' file\nUsage - Image.exe image_a.rgb image_b.rgb");
 			//return FALSE;
 		}
-		//queryImage.RGBtoHSV();
+		//if ( !queryImage.ReadAlphas(ImagePath_a) )
+		//{ 
+		//	AfxMessageBox( "Image has to be a '.rgb' file\nUsage - Image.exe image_a.rgb image_b.rgb");
+			//return FALSE;
+		//}
+		queryImage.ReadAlphas(ImagePath_a);
+		queryImage.RGBtoHSV();
+		destImage.RGBtoHSV();
+		if(compareImage_basic(queryImage, destImage)) {
+			TRACE("YES\n");
+		}
+		else 
+			TRACE("NO\n");
 	}
 
 	// Initialize global strings

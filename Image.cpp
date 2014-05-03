@@ -14,6 +14,7 @@
 MyImage::MyImage() 
 {
 	Data = NULL;
+	Alpha = NULL;
 	Width = -1;
 	Height = -1;
 	ImagePath[0] = 0;
@@ -26,6 +27,8 @@ MyImage::~MyImage()
 {
 	if ( Data )
 		delete Data;
+	if ( Alpha )
+		delete Alpha;
 	if(Hbuf)
 		delete Hbuf;
 	if(Sbuf)
@@ -40,7 +43,7 @@ MyImage::MyImage( MyImage *otherImage)
 {
 	Height = otherImage->Height;
 	Width  = otherImage->Width;
-	Data   = new char[Width*Height*3];
+	Data   = new unsigned char[Width*Height*3];
 	strcpy(otherImage->ImagePath, ImagePath );
 
 	for ( int i=0; i<(Height*Width*3); i++ )
@@ -58,7 +61,7 @@ MyImage & MyImage::operator= (const MyImage &otherImage)
 {
 	Height = otherImage.Height;
 	Width  = otherImage.Width;
-	Data   = new char[Width*Height*3];
+	Data   = new unsigned char[Width*Height*3];
 	strcpy( (char *)otherImage.ImagePath, ImagePath );
 
 	for ( int i=0; i<(Height*Width*3); i++ )
@@ -80,7 +83,7 @@ bool MyImage::ReadImage()
 	if (ImagePath[0] == 0 || Width < 0 || Height < 0 )
 	{
 		fprintf(stderr, "Image or Image properties not defined");
-		fprintf(stderr, "Usage is `Image.exe Imagefile w h`");
+		//fprintf(stderr, "Usage is `Image.exe Imagefile w h`");
 		return false;
 	}
 	
@@ -95,9 +98,9 @@ bool MyImage::ReadImage()
 
 	// Create and populate RGB buffers
 	int i;
-	char *Rbuf = new char[Height*Width]; 
-	char *Gbuf = new char[Height*Width]; 
-	char *Bbuf = new char[Height*Width]; 
+	unsigned char *Rbuf = new unsigned char[Height*Width]; 
+	unsigned char *Gbuf = new unsigned char[Height*Width]; 
+	unsigned char *Bbuf = new unsigned char[Height*Width]; 
 
 	for (i = 0; i < Width*Height; i ++)
 	{
@@ -113,7 +116,7 @@ bool MyImage::ReadImage()
 	}
 	
 	// Allocate Data structure and copy
-	Data = new char[Width*Height*3];
+	Data = new unsigned char[Width*Height*3];
 	for (i = 0; i < Height*Width; i++)
 	{
 		Data[3*i]	= Bbuf[i];
@@ -131,6 +134,34 @@ bool MyImage::ReadImage()
 
 }
 
+bool MyImage::ReadAlphas(const char *alpha_file)
+{
+	// Verify ImagePath
+	if (alpha_file == 0 || alpha_file[0] == 0 || Width < 0 || Height < 0 )
+	{
+		fprintf(stderr, "Image or Image properties not defined");
+		//fprintf(stderr, "Usage is `Image.exe Imagefile w h`");
+		return false;
+	}
+
+	// Create a valid output file pointer
+	FILE *IN_FILE;
+	IN_FILE = fopen(alpha_file, "rb");
+	if ( IN_FILE == NULL ) 
+	{
+		fprintf(stderr, "Error Opening Alpha File for Reading");
+		return false;
+	}
+
+	int total = Width * Height;
+	Alpha = new unsigned char[total];
+	for(int i = 0; i < total; i++) {
+		Alpha[i] = fgetc(IN_FILE);
+	}
+
+	fclose(IN_FILE);
+	return true;
+}
 
 
 // MyImage functions defined here
@@ -155,9 +186,9 @@ bool MyImage::WriteImage()
 
 	// Create and populate RGB buffers
 	int i;
-	char *Rbuf = new char[Height*Width]; 
-	char *Gbuf = new char[Height*Width]; 
-	char *Bbuf = new char[Height*Width]; 
+	unsigned char *Rbuf = new unsigned char[Height*Width]; 
+	unsigned char *Gbuf = new unsigned char[Height*Width]; 
+	unsigned char *Bbuf = new unsigned char[Height*Width]; 
 
 	for (i = 0; i < Height*Width; i++)
 	{
@@ -209,15 +240,7 @@ bool MyImage::Modify()
 }
 
 float Round(float Value) {
-
-	 if( Value > 0.0 ) {
 		return floor( Value  + 0.5);
-	 } 
-	 else
-	 {
-		return floor( Value - 0.5 );
-	 }
-
 }
 
 float MAX(float x, float y)
@@ -255,14 +278,12 @@ bool MyImage::RGBtoHSV()
 
 	for (int i = 0; i < Height*Width; i++)
 	{
-		Rbuf[i] = (unsigned char) Data[3*i];
-		Gbuf[i] = (unsigned char) Data[3*i+1];
-		Bbuf[i] = (unsigned char) Data[3*i+2];
+		Bbuf[i] =  Data[3*i];
+		Gbuf[i] =  Data[3*i+1];
+		Rbuf[i] =  Data[3*i+2];
 	}
-
 	for (int i = 0; i < Height*Width; i++)
 	{ 
-    
 		float R,G,B,H,S,V;
 		float min, max, delta;
 
@@ -279,10 +300,15 @@ bool MyImage::RGBtoHSV()
 		//TRACE( "delta: %f\n", delta);
 	
 		// Hue calculation//
-		if (R == max)		 H = fmod(((G - B) / delta), 6) * 60;
-		if (G == max)		 H = (2 + (B - R) / delta) * 60;
-		if (B == max)		 H = (4 + (R - G) / delta) * 60;
-						                          
+		if( delta == .0) {
+			H = 0;
+		}
+		else {
+			if (R == max)		 H = fmod(((G - B) / delta), 6) * 60;
+			if (G == max)		 H = (2 + (B - R) / delta) * 60;
+			if (B == max)		 H = (4 + (R - G) / delta) * 60;
+		}			       
+		
 		if (H < 0)	 H += 360;
 	
 
@@ -295,21 +321,32 @@ bool MyImage::RGBtoHSV()
 
 		V = max;
 
-		Hbuf[i] = Round(H);
-		Sbuf[i] = Round(S*100);
-		Vbuf[i] = Round(V*100);
+		Hbuf[i] = H;
+		Sbuf[i] = S*100;
+		Vbuf[i] = V*100;
 
 		//TRACE( "R: %f\n", R);
 		//TRACE( "G: %f\n", G);
 		//TRACE( "B: %f\n", B);
-        if (Hbuf[i] < 0) {
-            
+		if(Hbuf[i] < 0 || Hbuf[i] >= 360) TRACE("%d\n", Hbuf[i]);
+        if (Hbuf[i] < 0 || Hbuf[i] >= 360) {
+		//	TRACE( "Hue: %d\n", Hbuf[i]);
+			/*
+			TRACE( "Red: %f\n", Rbuf[i]);
+			TRACE( "Green: %f\n", Gbuf[i]);
+		TRACE( "Blue: %f\n", Bbuf[i]);
+		TRACE( "Hue: %d\n", Hbuf[i]);
+		TRACE( "Sat: %d\n", Sbuf[i]);
+		TRACE( "Val: %d\n", Vbuf[i]);
+		*/
+         /*   
 		printf( "Red: %f\n", Rbuf[i]);
 		printf( "Green: %f\n", Gbuf[i]);
 		printf( "Blue: %f\n", Bbuf[i]);
 		printf( "Hue: %d\n", Hbuf[i]);
 		printf( "Sat: %d\n", Sbuf[i]);
 		printf( "Val: %d\n", Vbuf[i]);
+		*/
         }
 	}
     
