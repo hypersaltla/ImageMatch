@@ -239,54 +239,78 @@ bool MyImage::Modify()
 	return false;
 }
 
+bool MyImage::DrawBox(int start_r, int start_c, int end_r, int end_c)
+{
+	//omit error input checking
+	for(int col = start_c; col < end_c; col++) {
+		int index = start_r * Width + col;
+		Data[index * 3] = 0;
+		Data[index * 3 + 1] = 255;
+		Data[index * 3 + 2] = 0;
+		
+	}
+
+	for(int row = start_r; row < end_r; row++) {
+		int index = row * Width + end_c - 1;
+		Data[index * 3] = 0;
+		Data[index * 3 + 1] = 255;
+		Data[index * 3 + 2] = 0;
+	}
+
+	for(int col = start_c; col < end_c; col++) {
+		int index = (end_r - 1) * Width + col;
+		Data[index * 3] = 0;
+		Data[index * 3 + 1] = 255;
+		Data[index * 3 + 2] = 0;
+	}
+
+	for(int row = start_r; row < end_r; row++) {
+		int index = row * Width + start_c;
+		Data[index * 3] = 0;
+		Data[index * 3 + 1] = 255;
+		Data[index * 3 + 2] = 0;
+	}
+
+	return true;
+}
+
 float Round(float Value) {
 		return floor( Value  + 0.5);
 }
 
-float MAX(float x, float y)
+float MAX(float x, float y, float z)
 {
-    if (x >= y)
+	float max = x;
+    if (y > max)
     {
-        return x;
+        max = y;
     }
-    return y;
-}
-
-float MIN(float x, float y)
-{
-    if (x <= y)
-    {
-        return x;
-    }
-    return y;
-}
-
-bool MyImage::RGBtoHSV()
-{
-	if(!Data) return false;
-	if(Hbuf) delete Hbuf;
-	if(Sbuf) delete Sbuf;
-	if(Vbuf) delete Vbuf;
-
-	float *Rbuf = new float[Height*Width]; 
-	float *Gbuf = new float[Height*Width]; 
-	float *Bbuf = new float[Height*Width];
-
-	Hbuf = new int[Height*Width]; 
-	Sbuf = new int[Height*Width]; 
-	Vbuf = new int[Height*Width]; 
-
-	for (int i = 0; i < Height*Width; i++)
+	if (z > max)
 	{
-		Bbuf[i] =  Data[3*i];
-		Gbuf[i] =  Data[3*i+1];
-		Rbuf[i] =  Data[3*i+2];
+		max = z;
 	}
-	for (int i = 0; i < Height*Width; i++)
-	{ 
-		float R,G,B,H,S,V;
-		float min, max, delta;
+	return max;
+}
 
+float MIN(float x, float y, float z)
+{
+	float min = x;
+    if (y < min)
+    {
+        min = y;
+    }
+	if (z < min)
+	{
+		min = z;
+	}
+	return min;
+}
+
+void rgbToHSV( float r, float g, float b, float *h, float *s, float *v )
+{
+	
+		float min, max, delta;
+/*
 		R = Rbuf[i]/255;
 		G = Gbuf[i]/255;
 		B = Bbuf[i]/255;
@@ -320,15 +344,69 @@ bool MyImage::RGBtoHSV()
 		//Value calculation//
 
 		V = max;
+	*/
+	min = MIN( r, g, b );
+	max = MAX( r, g, b );
+	*v = max;	
+	delta = max - min;
+	if( delta != 0 ) {
+		*s = delta / max;	
+	}
+	else {
+		*s = 0;
+		*h = -1;
+		return;
+	}
+	if( r == max )
+		*h = ( g - b ) / delta;		
+	else if( g == max )
+		*h = 2 + ( b - r ) / delta;
+	else
+		*h = 4 + ( r - g ) / delta;	
+	*h *= 60;	
+	if( *h < 0 ) {
+		*h += 360;
+	}
+}
 
+bool MyImage::RGBtoHSV()
+{
+	if(!Data) return false;
+	if(Hbuf) delete Hbuf;
+	if(Sbuf) delete Sbuf;
+	if(Vbuf) delete Vbuf;
+
+	float *Rbuf = new float[Height*Width]; 
+	float *Gbuf = new float[Height*Width]; 
+	float *Bbuf = new float[Height*Width];
+
+	Hbuf = new int[Height*Width]; 
+	Sbuf = new int[Height*Width]; 
+	Vbuf = new int[Height*Width]; 
+
+	for (int i = 0; i < Height*Width; i++)
+	{
+		Bbuf[i] =  Data[3*i];
+		Gbuf[i] =  Data[3*i+1];
+		Rbuf[i] =  Data[3*i+2];
+	}
+	for (int i = 0; i < Height*Width; i++)
+	{ 
+		float R = Rbuf[i]/255,
+			  G = Gbuf[i]/255,
+			  B = Bbuf[i]/255,
+			  H,S,V;
+
+		rgbToHSV(R, G, B, &H, &S, &V);
+		
 		Hbuf[i] = H;
 		Sbuf[i] = S*100;
 		Vbuf[i] = V*100;
-
+		//TRACE("r: %f, g: %f, b: %f, h: %d, s: %d, v: %d\n", R, G, B, Hbuf[i], Sbuf[i], Vbuf[i]);
 		//TRACE( "R: %f\n", R);
 		//TRACE( "G: %f\n", G);
 		//TRACE( "B: %f\n", B);
-		if(Hbuf[i] < 0 || Hbuf[i] >= 360) TRACE("%d\n", Hbuf[i]);
+		//if(Hbuf[i] < 0 || Hbuf[i] >= 360) TRACE("%d\n", Hbuf[i]);
         if (Hbuf[i] < 0 || Hbuf[i] >= 360) {
 		//	TRACE( "Hue: %d\n", Hbuf[i]);
 			/*

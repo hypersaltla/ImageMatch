@@ -77,7 +77,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 		queryImage.ReadAlphas(ImagePath_a);
 		queryImage.RGBtoHSV();
 		destImage.RGBtoHSV();
-		if(compareImage_basic(queryImage, destImage)) {
+		if(compareImage_v2(queryImage, destImage)) {
 			TRACE("YES\n");
 		}
 		else 

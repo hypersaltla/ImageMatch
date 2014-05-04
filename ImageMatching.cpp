@@ -4,10 +4,11 @@
 
 #include "Image.h"
 
-#define H_N 360
+#define H_N 18
 #define S_N 100
 #define V_N 100
-#define THRESHOLD 0.05
+#define THRESHOLD 0.07
+#define BLOCK_SIZE 32
 
 void print_arr(int *arr, int size)
 {
@@ -17,30 +18,47 @@ void print_arr(int *arr, int size)
     }
     TRACE("\n");
 }
-//get the histogram of Hue from the MyImage class, return an array
-int *getHistogram_H(const MyImage &img)
+void print_arr_d(double *arr, int size)
 {
+    for (int i = 0; i < size; i++) {
+       // printf("%d ", array[i]);
+		TRACE("%lf ", arr[i]);
+    }
+    TRACE("\n");
+}
+//get the histogram of Hue from the MyImage class, return an array, exclusive
+int *getHistogram_H(const MyImage &img, int start_r, int start_c, int end_r, int end_c)
+{
+	//omit error checking...
     int *histogram = new int[H_N];
     //memset(histogram, 0, H_N);
     for (int i = 0; i < H_N; i++) {
         histogram[i] = 0;
     }
 
-	int total = img.getWidth() * img.getHeight();
     int *Hbuf = img.getHbuf();
+	int *Sbuf = img.getSbuf();
+	int *Vbuf = img.getVbuf();
     //print_arr(histogram, 360);
     //printf("%d\n", total);
 	unsigned char *alpha_frame = img.getAlpha();
-    for(int i = 0; i < total; i++) {
-        //printf("%d\n", Hbuf[i]);
-		if(alpha_frame && !alpha_frame[i]) {
+	int non_sense = 0;
+    for(int i = start_r; i < end_r; i++) {
+		for(int j = start_c; j < end_c; j++) {
+			//printf("%d\n", Hbuf[i]);
+			int index = i * img.getWidth() + j;
+			if(alpha_frame && !alpha_frame[index]) {
+				//TRACE("%d\n", Hbuf[i]);
+				continue;
+			}
 			//TRACE("%d\n", Hbuf[i]);
-			continue;
+			//TRACE("h: %d, s: %d, v: %d\n", Hbuf[index], Sbuf[index], Vbuf[index]);
+			
+			if(Hbuf[index] >= 0)
+				histogram[Hbuf[index] / 20]++;
 		}
-		//if(Hbuf[i] != 0) TRACE("%d\n", Hbuf[i]);
-        histogram[Hbuf[i]]++;
     }
-    
+
     return histogram;
 }
 
@@ -115,13 +133,11 @@ double differ(double *his_logo, double *his_pic, int size)
     return rss;
 }
 
-
-
 //the basic version of main algorithm
 bool compareImage_basic(const MyImage &img_logo, const MyImage &img_pic)
 {
-	int *his_logo = getHistogram_H(img_logo);
-	int *his_pic = getHistogram_H(img_pic);
+	int *his_logo = getHistogram_H(img_logo, 0, 0, img_logo.getHeight(), img_logo.getWidth());
+	int *his_pic = getHistogram_H(img_pic, 0, 0, img_pic.getHeight(), img_pic.getWidth());
 	print_arr(his_logo, H_N);
     print_arr(his_pic, H_N);
     int total_pixel = img_logo.getWidth() * img_logo.getHeight();
@@ -135,14 +151,88 @@ bool compareImage_basic(const MyImage &img_logo, const MyImage &img_pic)
 	double *norm_his_pic = normalize(his_pic, H_N);
 	double diff = differ(norm_his_logo, norm_his_pic, H_N);
     TRACE("ecu diff: %lf\n", diff);
-    if(his_logo)
-        delete his_logo;
-    if (his_pic)
-        delete his_pic;
-    if (norm_his_logo)
-        delete norm_his_logo;
-    if (norm_his_pic)
-        delete norm_his_pic;
+    delete his_logo;
+    delete his_pic;
+    delete norm_his_logo;
+    delete norm_his_pic;
 
 	return diff <= THRESHOLD;
+}
+
+bool compareImage_v2(const MyImage &img_logo, MyImage &img_pic)
+{
+	int row_n = img_pic.getHeight() / BLOCK_SIZE;
+	int col_n = img_pic.getWidth() / BLOCK_SIZE;
+	
+	int *his_logo = getHistogram_H(img_logo, 0, 0, img_logo.getHeight(), img_logo.getWidth());
+	int *his_pic = getHistogram_H(img_pic, 0, 0, img_pic.getHeight(), img_pic.getWidth());
+	print_arr(his_logo, H_N);
+	print_arr(his_pic, H_N);
+	delete his_pic;
+	double *norm_logo = normalize(his_logo, H_N);
+	int **block_histos = new int*[row_n * col_n];
+
+	int total_blc = 0;
+	for(int i = 0; i < img_pic.getHeight(); i += BLOCK_SIZE) {
+		for(int j = 0; j < img_pic.getWidth(); j += BLOCK_SIZE) {
+			//TRACE("i: %d, j: %d\n", i, j);
+			block_histos[total_blc++] = getHistogram_H(img_pic, i, j, i + BLOCK_SIZE, j + BLOCK_SIZE);
+		//	print_arr(block_histos[total_blc - 1], H_N);
+		}
+	}
+
+	int window_size = min(row_n, col_n);
+	double min_diff = 1000.0;
+	int min_x = -1, min_y = -1, min_size = -1;
+	while(window_size > 0) {
+		for(int row = 0; row <= row_n - window_size; row++) {
+			for(int col = 0; col <= col_n - window_size; col++) {
+				
+				int *local_histo = new int[H_N];
+				for(int x = 0; x < H_N; x++) local_histo[x] = 0;
+				for(int x = row; x < row + window_size; x++) {
+					for(int y = col; y < col + window_size; y++) {
+						int block_index = x * col_n + y;
+						for(int z = 0; z < H_N; z++)
+							local_histo[z] += block_histos[block_index][z];
+					}
+				}
+				
+				double *norm_local = normalize(local_histo, H_N);
+				//print_arr_d(norm_local, H_N);
+				//print_arr_d(norm_logo, H_N);
+				double diff = differ(norm_local, norm_logo, H_N);
+				//TRACE("row: %d, col: %d, size: %d, diff: %lf\n", row, col, window_size, diff);
+				if(diff < min_diff) {
+					min_diff = diff;
+					min_y = row;
+					min_x = col;
+					min_size = window_size;
+					TRACE("row: %d, col: %d, size: %d, diff: %lf\n", min_y, min_x, min_size, min_diff);
+				}
+				/*
+				if(diff < THRESHOLD) {
+					print_arr(local_histo, H_N);
+					TRACE("x: %d, y: %d, size: %d, diff: %lf\n", row, col, window_size, diff);
+					return true;
+				}
+				*/
+				delete local_histo;
+				delete norm_local;
+			}
+		}
+		window_size--;
+	}
+	TRACE("row: %d, col: %d, size: %d, diff: %lf\n", min_y, min_x, min_size, min_diff);
+	int length = min_size * BLOCK_SIZE;
+	img_pic.DrawBox(min_y * BLOCK_SIZE, min_x * BLOCK_SIZE, min_y * BLOCK_SIZE + length, min_x * BLOCK_SIZE + length);
+	delete his_logo;
+	delete norm_logo;
+	
+	//delete [] block_histos;
+	for(int i = 0; i < total_blc; i++) {
+		delete block_histos[i];
+	}
+	delete block_histos;
+	return false;
 }

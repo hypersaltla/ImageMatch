@@ -75,7 +75,7 @@ public:
 
 	// Modifications
 	bool	Modify();
-
+	bool    DrawBox(int start_r, int start_c, int end_r, int end_c);
 	
 
 };
@@ -87,6 +87,6 @@ double *normalize(int *histogram, int size, int total);
 void filter(int *his_logo, int *his_pic, int size);
 double differ(double *his_logo, double *his_pic, int size);
 bool compareImage_basic(const MyImage &img_logo, const MyImage &img_pic);
-
+bool compareImage_v2(const MyImage &img_logo, MyImage &img_pic);
 
 #endif //IMAGE_DISPLAY
