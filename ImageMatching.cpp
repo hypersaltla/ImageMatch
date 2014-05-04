@@ -2,9 +2,12 @@
  * ImageMatching.cpp defines the main algorithms for the image searching project
  */
 
+#include <vector>
+#include <queue>
 #include "Image.h"
 
-#define H_N 18
+#define H_N 15
+#define BUCKET 24
 #define S_N 100
 #define V_N 100
 #define THRESHOLD 0.07
@@ -55,7 +58,7 @@ int *getHistogram_H(const MyImage &img, int start_r, int start_c, int end_r, int
 			//TRACE("h: %d, s: %d, v: %d\n", Hbuf[index], Sbuf[index], Vbuf[index]);
 			
 			if(Hbuf[index] >= 0)
-				histogram[Hbuf[index] / 20]++;
+				histogram[Hbuf[index] / BUCKET]++;
 		}
     }
 
@@ -133,6 +136,21 @@ double differ(double *his_logo, double *his_pic, int size)
     return rss;
 }
 
+typedef struct Box
+{
+	int row, col, len;
+	double diff;
+};
+
+class CompareBox
+{
+public:
+	bool operator() (Box &a, Box &b)
+	{
+		return a.diff < b.diff;
+	}
+};
+
 //the basic version of main algorithm
 bool compareImage_basic(const MyImage &img_logo, const MyImage &img_pic)
 {
@@ -182,8 +200,10 @@ bool compareImage_v2(const MyImage &img_logo, MyImage &img_pic)
 	}
 
 	int window_size = min(row_n, col_n);
-	double min_diff = 1000.0;
-	int min_x = -1, min_y = -1, min_size = -1;
+	//double min_diff = 1000.0;
+	//int min_x = -1, min_y = -1, min_size = -1;
+	std::priority_queue<Box, std::vector<Box>, CompareBox> best_boxes;
+	int max_heap_size = 5;
 	while(window_size > 0) {
 		for(int row = 0; row <= row_n - window_size; row++) {
 			for(int col = 0; col <= col_n - window_size; col++) {
@@ -203,29 +223,28 @@ bool compareImage_v2(const MyImage &img_logo, MyImage &img_pic)
 				//print_arr_d(norm_logo, H_N);
 				double diff = differ(norm_local, norm_logo, H_N);
 				//TRACE("row: %d, col: %d, size: %d, diff: %lf\n", row, col, window_size, diff);
-				if(diff < min_diff) {
-					min_diff = diff;
-					min_y = row;
-					min_x = col;
-					min_size = window_size;
-					TRACE("row: %d, col: %d, size: %d, diff: %lf\n", min_y, min_x, min_size, min_diff);
+				if(best_boxes.size() == max_heap_size && best_boxes.top().diff > diff) {
+					best_boxes.pop();
 				}
-				/*
-				if(diff < THRESHOLD) {
-					print_arr(local_histo, H_N);
-					TRACE("x: %d, y: %d, size: %d, diff: %lf\n", row, col, window_size, diff);
-					return true;
+				if(best_boxes.size() < max_heap_size) {
+					Box new_box = {row, col, window_size, diff};
+					//TRACE("r: %d, c: %d, size: %d, diff: %lf\n", new_box.row, new_box.col, new_box.len, new_box.diff);
+					best_boxes.push(new_box);
 				}
-				*/
 				delete local_histo;
 				delete norm_local;
 			}
 		}
 		window_size--;
 	}
-	TRACE("row: %d, col: %d, size: %d, diff: %lf\n", min_y, min_x, min_size, min_diff);
-	int length = min_size * BLOCK_SIZE;
-	img_pic.DrawBox(min_y * BLOCK_SIZE, min_x * BLOCK_SIZE, min_y * BLOCK_SIZE + length, min_x * BLOCK_SIZE + length);
+	//TRACE("row: %d, col: %d, size: %d, diff: %lf\n", min_y, min_x, min_size, min_diff);
+	//int length = min_size * BLOCK_SIZE;
+	while(!best_boxes.empty()) {
+		Box best_box = best_boxes.top();
+		TRACE("row: %d, col: %d, size: %d, diff: %lf\n", best_box.row, best_box.col, best_box.len, best_box.diff);
+		img_pic.DrawBox(best_box.row * BLOCK_SIZE, best_box.col * BLOCK_SIZE, (best_box.row  + best_box.len)* BLOCK_SIZE, (best_box.col + best_box.len) * BLOCK_SIZE);
+		best_boxes.pop();
+	}
 	delete his_logo;
 	delete norm_logo;
 	
