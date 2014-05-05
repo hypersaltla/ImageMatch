@@ -14,8 +14,10 @@
 // Include class files
 #include "Image.h"
 //#include "ImageMatching.cpp"
+//#include <opencv2/highgui/highgui.hpp>
 
 #define MAX_LOADSTRING 100
+//using namespace cv;
 
 // Global Variables:
 MyImage			queryImage, destImage;			// image objects
@@ -49,7 +51,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 	queryImage.setHeight(h);
 	destImage.setWidth(w);
 	destImage.setHeight(h);
-
+	
 	if ( strstr(ImagePath_q, ".rgb" )==NULL || strstr(ImagePath_d, ".rgb") == NULL )
 	{ 
 		AfxMessageBox( "Image has to be a '.rgb' file\nUsage - Image.exe image_a.rgb image_b.rgb");
@@ -106,7 +108,6 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 			DispatchMessage(&msg);
 		}
 	}
-
 	return msg.wParam;
 }
 

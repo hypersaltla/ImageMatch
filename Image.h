@@ -40,6 +40,7 @@ private:
 	int     *Hbuf;                  // Hue buffer
 	int     *Sbuf;                  // Saturation buffer
 	int     *Vbuf;                  // Value buffer
+	unsigned char   *Ybuf;          // Y buffer
 
 public:
 	// Constructor
@@ -58,6 +59,7 @@ public:
 	void	setImageData( const unsigned char *img ) { Data = (unsigned char *)img; };
 	void	setImagePath( const char *path) { strcpy(ImagePath, path); }
 	bool    RGBtoHSV(); //RGB convert to HSV
+	bool    RGBtoGray(); //RGB conver to gray scale
 	int		getWidth() const { return Width; };
 	int		getHeight() const { return Height; };
 	unsigned char*	getImageData() const { return Data; };
@@ -66,6 +68,7 @@ public:
 	int*	getHbuf() const { return Hbuf; }
 	int*	getSbuf() const { return Sbuf; }
 	int*	getVbuf() const { return Vbuf; }
+	unsigned char *getYbuf() const { return Ybuf; }
 
 
 	// Input Output operations
@@ -87,6 +90,6 @@ double *normalize(int *histogram, int size, int total);
 void filter(int *his_logo, int *his_pic, int size);
 double differ(double *his_logo, double *his_pic, int size);
 bool compareImage_basic(const MyImage &img_logo, const MyImage &img_pic);
-bool compareImage_v2(const MyImage &img_logo, MyImage &img_pic);
+bool compareImage_v2(MyImage &img_logo, MyImage &img_pic);
 
 #endif //IMAGE_DISPLAY

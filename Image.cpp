@@ -21,6 +21,7 @@ MyImage::MyImage()
     Hbuf = NULL;
     Sbuf = NULL;
     Vbuf = NULL;
+	Ybuf = NULL;
 }
 
 MyImage::~MyImage()
@@ -35,6 +36,8 @@ MyImage::~MyImage()
 		delete Sbuf;
 	if(Vbuf)
 		delete Vbuf;
+	if(Ybuf)
+		delete Ybuf;
 }
 
 
@@ -431,6 +434,19 @@ bool MyImage::RGBtoHSV()
 	delete Rbuf;
 	delete Gbuf;
 	delete Bbuf;
+
+	return true;
+}
+
+bool MyImage::RGBtoGray()
+{
+	if(Ybuf)
+		delete Ybuf;
+	Ybuf = new unsigned char[Width * Height];
+	for(int i = 0; i < Width * Height; i++) {
+		Ybuf[i] = (unsigned char) (0.2126 * Data[i + 2] + 0.7152 * Data[i + 1] + 0.0722 * Data[i]);
+		//TRACE("i: %d\n", Ybuf[i]);
+	}
 
 	return true;
 }
