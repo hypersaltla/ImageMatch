@@ -321,15 +321,15 @@ bool compareImage_v2(MyImage &img_logo, MyImage &img_pic)
 	int row_n = img_pic.getHeight() / BLOCK_SIZE;
 	int col_n = img_pic.getWidth() / BLOCK_SIZE;
 	
-	//int *his_logo = getHistogram(img_logo, 0, 0, img_logo.getHeight(), img_logo.getWidth());
-	int *his_logo = getHistogram_H(img_logo, 0, 0, img_logo.getHeight(), img_logo.getWidth());
+	int *his_logo = getHistogram(img_logo, 0, 0, img_logo.getHeight(), img_logo.getWidth());
+	//int *his_logo = getHistogram_H(img_logo, 0, 0, img_logo.getHeight(), img_logo.getWidth());
 	//int *his_pic = getHistogram_H(img_pic, 0, 0, img_pic.getHeight(), img_pic.getWidth());
 	
 	//print_arr(his_logo, histo_size);
 	//print_arr(his_logo, histo_size_h);
 	//delete his_pic;
-	//double *norm_logo = normalize(his_logo, histo_size);
-	double *norm_logo = normalize(his_logo, histo_size_h);
+	double *norm_logo = normalize(his_logo, histo_size);
+	//double *norm_logo = normalize(his_logo, histo_size_h);
 	//print_arr_d(norm_logo, histo_size);
 	//print_arr_d(norm_logo, histo_size_h);
 	int **block_histos = new int*[row_n * col_n];
@@ -338,7 +338,7 @@ bool compareImage_v2(MyImage &img_logo, MyImage &img_pic)
 	for(int i = 0; i < img_pic.getHeight(); i += BLOCK_SIZE) {
 		for(int j = 0; j < img_pic.getWidth(); j += BLOCK_SIZE) {
 			//TRACE("i: %d, j: %d\n", i, j);
-			block_histos[total_blc++] = getHistogram_H(img_pic, i, j, i + BLOCK_SIZE, j + BLOCK_SIZE);
+			block_histos[total_blc++] = getHistogram(img_pic, i, j, i + BLOCK_SIZE, j + BLOCK_SIZE);
 		//	print_arr(block_histos[total_blc - 1], H_N);
 		}
 	}
@@ -352,25 +352,25 @@ bool compareImage_v2(MyImage &img_logo, MyImage &img_pic)
 		for(int row = 0; row <= row_n - window_size; row++) {
 			for(int col = 0; col <= col_n - window_size; col++) {
 				
-				//int *local_histo = new int[histo_size];
-				int *local_histo = new int[histo_size_h];
-				//for(int x = 0; x < histo_size; x++) local_histo[x] = 0;
-				for(int x = 0; x < histo_size_h; x++) local_histo[x] = 0;
+				int *local_histo = new int[histo_size];
+				//int *local_histo = new int[histo_size_h];
+				for(int x = 0; x < histo_size; x++) local_histo[x] = 0;
+				//for(int x = 0; x < histo_size_h; x++) local_histo[x] = 0;
 				for(int x = row; x < row + window_size; x++) {
 					for(int y = col; y < col + window_size; y++) {
 						int block_index = x * col_n + y;
+						for(int z = 0; z < histo_size; z++)
 						//for(int z = 0; z < histo_size_h; z++)
-						for(int z = 0; z < histo_size_h; z++)
 							local_histo[z] += block_histos[block_index][z];
 					}
 				}
 				
-				//double *norm_local = normalize(local_histo, histo_size);
-				double *norm_local = normalize(local_histo, histo_size_h);
+				double *norm_local = normalize(local_histo, histo_size);
+				//double *norm_local = normalize(local_histo, histo_size_h);
 				//print_arr_d(norm_local, H_N);
 				//print_arr_d(norm_logo, H_N);
-				//double diff = differ(norm_local, norm_logo, histo_size);
-				double diff = differ(norm_local, norm_logo, histo_size_h);
+				double diff = differ(norm_local, norm_logo, histo_size);
+				//double diff = differ(norm_local, norm_logo, histo_size_h);
 				//TRACE("row: %d, col: %d, size: %d, diff: %lf\n", row, col, window_size, diff);
 				/*
 				if(row == 3 && col == 6 && window_size == 2) {
@@ -403,20 +403,25 @@ bool compareImage_v2(MyImage &img_logo, MyImage &img_pic)
 
 	int min_err = (1 << 31) - 1;
 	double min_diff = 10.0;
+	//printf("here\n");
 	while(!best_boxes.empty()) {
 		Box best_box = best_boxes.top();
-		//TRACE("row: %d, col: %d, size: %d, diff: %lf\n", best_box.row, best_box.col, best_box.len, best_box.diff);
+		TRACE("row: %d, col: %d, size: %d, diff: %lf\n", best_box.row, best_box.col, best_box.len, best_box.diff);
+		//printf("row: %d, col: %d, size: %d, diff: %lf\n", best_box.row, best_box.col, best_box.len, best_box.diff);
 		//print_arr(best_box.histogram, histo_size);
 		//print_arr(best_box.histogram, histo_size_h);
 		img_pic.DrawBox(best_box.row * BLOCK_SIZE, best_box.col * BLOCK_SIZE, (best_box.row  + best_box.len)* BLOCK_SIZE, (best_box.col + best_box.len) * BLOCK_SIZE);
 		best_boxes.pop();
-		int cur_err = diff_pic(pyramid[best_box.len - 1], best_box.len, img_pic, best_box.row * BLOCK_SIZE, best_box.col * BLOCK_SIZE, (best_box.row  + best_box.len)* BLOCK_SIZE, (best_box.col + best_box.len) * BLOCK_SIZE);
+		if(best_boxes.empty())
+		    min_err = diff_pic(pyramid[best_box.len - 1], best_box.len, img_pic, best_box.row * BLOCK_SIZE, best_box.col * BLOCK_SIZE, (best_box.row  + best_box.len)* BLOCK_SIZE, (best_box.col + best_box.len) * BLOCK_SIZE);
 		//TRACE("cur_err: %d\n", cur_err);
-		if(cur_err < min_err) min_err = cur_err;
+		//printf("cur_err: %d\n", cur_err);
+		//if(cur_err < min_err) min_err = cur_err;
 		if(best_box.diff < min_diff) min_diff = best_box.diff;
 		delete best_box.histogram;
 	}
-	//TRACE("min_square_error: %d\n", min_err);
+	TRACE("min_square_error: %d\n", min_err);
+	TRACE("min_diff: %f\n", min_diff);
 	delete his_logo;
 	delete norm_logo;
 	
@@ -427,12 +432,11 @@ bool compareImage_v2(MyImage &img_logo, MyImage &img_pic)
 	for(int i = 0; i < 9; i++) {
 		delete pyramid[i];
 	}
-
+	delete pyramid;
 	delete block_histos;
-	//TRACE("min_diff: %f\n", min_diff);
-	if(min_diff <= 0.002) return true;
-	if(min_diff >= 0.358) return false;
-	return min_err < 305000;
+	if(min_diff <= 0.02) return true;
+	if(min_diff >= 0.33) return false;
+	return min_err < 400000;
 }
 
 
